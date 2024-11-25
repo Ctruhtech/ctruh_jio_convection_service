@@ -2,7 +2,7 @@ pipeline {
     environment {
     registry = "ctruh.azurecr.io/backend/jioconvention-service"
     containername = "jioconvention-service"
-    http_port = "5040"
+    http_port = "5002"
     registryCredential = 'acrid'
     dockerImage = ''
     }
@@ -67,6 +67,6 @@ def imagePrune(containerName){
 }
 
 def runApp(containerName, httpPort){
-        sh "docker run -d --rm -p $httpPort:3000 --name $containerName --env-file ./envfile $registry:v1.$BUILD_NUMBER"
+        sh "docker run -d --rm -p $httpPort:5002 --name $containerName --env-file ./envfile $registry:v1.$BUILD_NUMBER"
         echo "Application started on port: ${httpPort} (http)"
 }
