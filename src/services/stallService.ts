@@ -3,17 +3,15 @@ import { Readable } from "stream";
 import { Upload } from "@aws-sdk/lib-storage";
 import { Stall } from "../models/stall"; // Assuming you have a Stall model
 import mime from "mime-types"; // To dynamically set the content type
-import path from "path";
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import dotenv from "dotenv";
 
-import {
-  S3Client,
-} from "@aws-sdk/client-s3";
+import { S3Client } from "@aws-sdk/client-s3";
 dotenv.config();
 // Initialize the AWS S3 client
 // const s3 = new AWS.S3();
 const s3Client = new S3Client({
-  region: process.env.AWS_BUCKET_REGION ,
+  region: process.env.AWS_BUCKET_REGION,
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -139,14 +137,13 @@ export const uploadStallImagesService = async (
       wall1Url: stall.wall1Url,
       wall2Url: stall.wall2Url,
       wall3Url: stall.wall3Url,
-      wall4Url: stall.wall4Url
+      wall4Url: stall.wall4Url,
     };
   } catch (error) {
     console.error("Error during image upload and stall update:", error);
     throw new Error("Failed to upload images");
   }
 };
-
 
 // Helper function for uploading images to S3 using multipart upload
 export async function parallelUploadToS3(
@@ -282,10 +279,108 @@ export const updateStallImagesService = async (
       wall1Url: stall.wall1Url,
       wall2Url: stall.wall2Url,
       wall3Url: stall.wall3Url,
-      wall4Url: stall.wall4Url
+      wall4Url: stall.wall4Url,
     };
   } catch (error) {
     console.error("Error during image update:", error);
     throw new Error("Failed to update images");
+  }
+};
+export const extractKeyFromUrl = (url: string): string => {
+  // Make sure the URL is valid and can be parsed
+  const urlObj = new URL(url); // Parse the URL
+  const pathParts = urlObj.pathname.split("/"); // Split the pathname
+  // Skip the first empty element (due to leading '/') and return the rest as the S3 key
+  return pathParts.slice(1).join("/");
+};
+export const deleteStallImageService = async (
+  stallId: string,
+  uniqueCode: string,
+  imageType: "logo" | "wall1" | "wall2" | "wall3" | "wall4"
+): Promise<void> => {
+  try {
+    // Fetch the stall from the database
+    const stall = await Stall.findById(stallId);
+
+    if (!stall) {
+      throw new Error("Stall not found");
+    }
+
+    if (uniqueCode !== stall.uniqueCode) {
+      throw new Error("Stall unique code does not match");
+    }
+
+    // Get the S3 key (file path) based on image type
+    let s3Key: string | undefined;
+    switch (imageType) {
+      case "logo":
+        s3Key = await extractKeyFromUrl(stall.logoUrl);
+        break;
+      case "wall1":
+        s3Key = await extractKeyFromUrl(stall.wall1Url);
+        break;
+      case "wall2":
+        s3Key = await extractKeyFromUrl(stall.wall2Url);
+        break;
+      case "wall3":
+        s3Key = await extractKeyFromUrl(stall.wall3Url);
+        break;
+      case "wall4":
+        s3Key = await extractKeyFromUrl(stall.wall4Url);
+        break;
+      default:
+        throw new Error("Invalid image type");
+    }
+
+    if (!s3Key) {
+      throw new Error(`No URL found for ${imageType}`);
+    }
+   
+    // Delete the image from S3
+    await deleteImageFromS3(s3Key);
+
+    // Remove the URL from the stall document in the database
+    switch (imageType) {
+      case "logo":
+        stall.logoUrl = null;
+        break;
+      case "wall1":
+        stall.wall1Url = null;
+        break;
+      case "wall2":
+        stall.wall2Url = null;
+        break;
+      case "wall3":
+        stall.wall3Url = null;
+        break;
+      case "wall4":
+        stall.wall4Url = null;
+        break;
+    }
+
+    // Save the updated stall document
+    await stall.save();
+  } catch (error) {
+    console.error(`Error deleting ${imageType} from stall:`, error);
+    throw new Error(`Failed to delete ${imageType}`);
+  }
+};
+
+// Helper function to delete image from S3
+const deleteImageFromS3 = async (s3Key: string): Promise<void> => {
+  try {
+    // Create a delete command
+    const deleteParams = {
+      Bucket: process.env.AWS_BUCKET_NAME, // Your bucket name
+      Key: s3Key, // The S3 key for the image
+    };
+
+    // Send the delete request to S3
+    const deleteCommand = new DeleteObjectCommand(deleteParams);
+    await s3Client.send(deleteCommand);
+    console.log(`Successfully deleted image from S3: ${s3Key}`);
+  } catch (error) {
+    console.error(`Error deleting image from S3:`, error);
+    throw new Error("Failed to delete image from S3");
   }
 };

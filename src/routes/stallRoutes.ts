@@ -3,26 +3,23 @@ import multer from "multer";
 import {
   createStall,
   getAvailableStalls,
+  getStallsById,
+  handleDeleteImage,
   handleImageUpload,
   handleUpdateImageUpload,
 } from "../controllers/stallController";
 
 const router = express.Router();
-
+router.get("/stalls/available", getAvailableStalls);
+router.post("/stalls", createStall);
+router.get("/stalls/getById", getStallsById);
+router.delete("/stalls/delete",handleDeleteImage)
 // Multer storage setup for file upload operations
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
   limits: { fileSize: 1024 * 1024 * 1024 * 1 },
 });
-// Route to create a new stall
-router.post("/stalls", createStall);
-
-// Route to get all available stalls
-router.get("/stalls/available", getAvailableStalls);
-
-// // Route to select a stall (mark as unavailable)
-// router.post('/stalls/select', selectStall);
 
 // Route to upload images for the selected stall
 router.post(

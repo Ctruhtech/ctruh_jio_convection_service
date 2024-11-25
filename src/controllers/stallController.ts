@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import { Stall } from "../models/stall";
 import { Readable } from "stream";
-import { updateStallImagesService, uploadStallImagesService } from "../services/stallService";
+import { deleteStallImageService, updateStallImagesService, uploadStallImagesService } from "../services/stallService";
 import multer from "multer";
 import crypto from "crypto";
+import {ObjectId} from "mongodb";
 
 const upload = multer(); // To handle image buffers
 
@@ -158,6 +159,41 @@ export const handleUpdateImageUpload = async (req: Request, res: Response): Prom
     });
   } catch (error: any) {
     console.error("Error updating images:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getStallsById = async (req: Request, res: Response) => {
+  try {
+    let id = new ObjectId(req?.body?.id);
+    // Fetch all stalls that are available
+    const availableStalls = await Stall.findById(id).select("_id name logoUrl wall1Url wall2Url wall3Url wall4Url");
+    if(!availableStalls){
+      return res.status(400).json({ error: "Stall not found" });
+    }
+    res.json({ availableStalls });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const handleDeleteImage = async (req: Request, res: Response) => {
+  try {
+    const { stallId, imageType , uniqueCode } = req.body; // Extract stallId and imageType from request body
+    
+    // Validate imageType
+    const validImageTypes = ['logo', 'wall1', 'wall2', 'wall3', 'wall4'];
+    if (!validImageTypes.includes(imageType)) {
+      return res.status(400).json({ error: 'Invalid image type' });
+    }
+
+    // Call the delete service
+    await deleteStallImageService(stallId, uniqueCode,imageType);
+
+    // Send success response
+    res.status(200).json({ message: `${imageType} deleted successfully` });
+  } catch (error) {
+    console.error("Error deleting image:", error);
     res.status(500).json({ error: error.message });
   }
 };
