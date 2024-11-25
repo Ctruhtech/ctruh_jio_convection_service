@@ -1,18 +1,51 @@
-import express from 'express';
-import { createStall, getAvailableStalls, selectStall, uploadStallImages } from '../controllers/stallController';
+import express from "express";
+import multer from "multer";
+import {
+  createStall,
+  getAvailableStalls,
+  handleImageUpload,
+  handleUpdateImageUpload,
+} from "../controllers/stallController";
 
 const router = express.Router();
 
+// Multer storage setup for file upload operations
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 1024 * 1024 * 1024 * 1 },
+});
 // Route to create a new stall
-router.post('/stalls', createStall);
+router.post("/stalls", createStall);
 
 // Route to get all available stalls
-router.get('/stalls/available', getAvailableStalls);
+router.get("/stalls/available", getAvailableStalls);
 
-// Route to select a stall (mark as unavailable)
-router.post('/stalls/select', selectStall);
+// // Route to select a stall (mark as unavailable)
+// router.post('/stalls/select', selectStall);
 
 // Route to upload images for the selected stall
-router.post('/stalls/upload-images', uploadStallImages);
+router.post(
+  "/stalls/upload-images",
+  upload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "wall1", maxCount: 1 },
+    { name: "wall2", maxCount: 1 },
+    { name: "wall3", maxCount: 1 },
+    { name: "wall4", maxCount: 1 },
+  ]),
+  handleImageUpload
+);
+router.post(
+  "/stalls/upload-images-update",
+  upload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "wall1", maxCount: 1 },
+    { name: "wall2", maxCount: 1 },
+    { name: "wall3", maxCount: 1 },
+    { name: "wall4", maxCount: 1 },
+  ]),
+  handleUpdateImageUpload
+);
 
 export default router;

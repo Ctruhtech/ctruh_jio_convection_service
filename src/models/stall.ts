@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema } from "mongoose";
 
 interface IStall extends Document {
   name: string;
@@ -10,6 +10,7 @@ interface IStall extends Document {
   wall3Url?: string;
   wall4Url?: string;
   zone?: string;
+  uniqueCode?: string;
 }
 
 const StallSchema: Schema = new Schema({
@@ -22,8 +23,9 @@ const StallSchema: Schema = new Schema({
   wall3Url: { type: String, required: false },
   wall4Url: { type: String, required: false },
   zone: { type: String, required: false },
+  uniqueCode: { type: String, required: false },
 });
 
-const Stall = mongoose.model<IStall>('Stall', StallSchema);
+const Stall = mongoose.model<IStall>("Stall", StallSchema);
 
 export { Stall, IStall };

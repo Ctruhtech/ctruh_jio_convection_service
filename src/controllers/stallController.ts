@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
-import { Stall } from '../models/stall';
-import { Readable } from 'stream';
-import { selectStallAndUploadImages } from '../services/stallService';
-import multer from 'multer';
-import { getFileExtension } from '../utils/fileUtils';
+import { Request, Response } from "express";
+import { Stall } from "../models/stall";
+import { Readable } from "stream";
+import { updateStallImagesService, uploadStallImagesService } from "../services/stallService";
+import multer from "multer";
+import crypto from "crypto";
 
 const upload = multer(); // To handle image buffers
 
@@ -17,24 +17,37 @@ interface Files {
 }
 
 // Create a new stall (with default isAvailable: true)
+
 export const createStall = async (req: Request, res: Response) => {
   try {
     const { name } = req.body;
-
+    // Check if the 'name' is provided
     if (!name) {
-      return res.status(400).json({ error: 'Stall name is required' });
+      return res.status(400).json({ error: "Stall name is required" });
     }
 
-    // Create a new stall with 'isAvailable' set to true by default
+    // Derive zone from the first letter of the name, capitalized
+    const zone = name.charAt(0).toUpperCase();
+
+    // Generate a unique 8-character alphanumeric code
+    const uniqueCode = crypto.randomBytes(4).toString("hex").toUpperCase(); // 8 characters
+
+    // Create a new stall with 'isAvailable' set to true by default, and other fields
     const newStall = new Stall({
       name,
       isAvailable: true,
+      zone,
+      uniqueCode,
     });
-
+    // Save the new stall to the database
     await newStall.save();
 
-    res.status(201).json({ message: 'Stall created successfully', stall: newStall });
+    // Return success response
+    res
+      .status(201)
+      .json({ message: "Stall created successfullydd", stall: newStall });
   } catch (error: any) {
+    // Handle errors and send a response
     res.status(500).json({ error: error.message });
   }
 };
@@ -43,8 +56,7 @@ export const createStall = async (req: Request, res: Response) => {
 export const getAvailableStalls = async (req: Request, res: Response) => {
   try {
     // Fetch all stalls that are available
-    const availableStalls = await Stall.find({ isAvailable: true });
-   console.log(availableStalls);
+    const availableStalls = await Stall.find().select("_id name");
     res.json({ availableStalls });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -52,96 +64,100 @@ export const getAvailableStalls = async (req: Request, res: Response) => {
 };
 
 // Select a stall and mark it as unavailable
-export const selectStall = async (req: Request, res: Response) => {
+// export const selectStall = async (req: Request, res: Response) => {
+//   try {
+//     const { stallId } = req.body;
+
+//     if (!stallId) {
+//       return res.status(400).json({ error: "Missing stallId" });
+//     }
+
+//     // Check if the stall is available
+//     const stall = await Stall.findOneAndUpdate(
+//       { _id: stallId, isAvailable: true }, // Only update if the stall is available
+//       { $set: { isAvailable: false } }, // Mark as unavailable
+//       { new: true } // Return the updated document
+//     );
+
+//     if (!stall) {
+//       return res
+//         .status(400)
+//         .json({ error: "Stall is already selected or unavailable" });
+//     }
+
+//     res.json({ message: "Stall selected successfully", stall });
+//   } catch (error: any) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+export const handleImageUpload = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { stallId } = req.body;
+    // Dynamically extract files if they exist in the request
+    const files = req.files || {};
 
-    if (!stallId) {
-      return res.status(400).json({ error: 'Missing stallId' });
-    }
+    const logoStream = files["logo"] ? Readable.from(files["logo"][0]?.buffer) : null;
+    const wall1Stream = files["wall1"] ? Readable.from(files["wall1"][0]?.buffer) : null;
+    const wall2Stream = files["wall2"] ? Readable.from(files["wall2"][0]?.buffer) : null;
+    const wall3Stream = files["wall3"] ? Readable.from(files["wall3"][0]?.buffer) : null;
+    const wall4Stream = files["wall4"] ? Readable.from(files["wall4"][0]?.buffer) : null;
 
-    // Check if the stall is available
-    const stall = await Stall.findOneAndUpdate(
-      { _id: stallId, isAvailable: true }, // Only update if the stall is available
-      { $set: { isAvailable: false } }, // Mark as unavailable
-      { new: true } // Return the updated document
+    // Extract stallId and uniqueCode from the request body
+    const { stallId, uniqueCode } = req.body;
+
+    // Call the service function to handle image upload and stall update
+    const imageUrls = await uploadStallImagesService(
+      stallId,
+      uniqueCode,
+      logoStream,
+      wall1Stream,
+      wall2Stream,
+      wall3Stream,
+      wall4Stream
     );
 
-    if (!stall) {
-      return res.status(400).json({ error: 'Stall is already selected or unavailable' });
-    }
-
-    res.json({ message: 'Stall selected successfully', stall });
+    // Send success response with the uploaded image URLs
+    res.status(200).json({
+      message: "Images uploaded successfully",
+      imageUrls,
+    });
   } catch (error: any) {
+    console.error("Error uploading images:", error);
     res.status(500).json({ error: error.message });
   }
 };
-export const uploadStallImages = [
-  upload.fields([
-    { name: 'logo', maxCount: 1 },
-    { name: 'wall1', maxCount: 1 },
-    { name: 'wall2', maxCount: 1 },
-    { name: 'wall3', maxCount: 1 },
-    { name: 'wall4', maxCount: 1 }, // Added wall4
-  ]),
-  async (req: Request, res: Response) => {
-    try {
-      const { stallId, userId, zone } = req.body;
+export const handleUpdateImageUpload = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Dynamically extract files if they exist in the request
+    const files = req.files || {};
 
-      // Cast req.files to the Files interface
-      const files = req.files as Files;
+    const logoStream = files["logo"] ? Readable.from(files["logo"][0]?.buffer) : null;
+    const wall1Stream = files["wall1"] ? Readable.from(files["wall1"][0]?.buffer) : null;
+    const wall2Stream = files["wall2"] ? Readable.from(files["wall2"][0]?.buffer) : null;
+    const wall3Stream = files["wall3"] ? Readable.from(files["wall3"][0]?.buffer) : null;
+    const wall4Stream = files["wall4"] ? Readable.from(files["wall4"][0]?.buffer) : null;
 
-      // Check if required fields and files are provided
-      if (!stallId || !userId || !files.logo || !files.wall1 || !files.wall2 || !files.wall3 || !files.wall4) {
-        return res.status(400).json({ error: 'Missing required fields or files' });
-      }
+    // Extract stallId and uniqueCode from the request body
+    const { stallId, uniqueCode } = req.body;
 
-      // Extract image buffers from the request
-      const logoFile = files.logo[0];
-      const wall1File = files.wall1[0];
-      const wall2File = files.wall2[0];
-      const wall3File = files.wall3[0];
-      const wall4File = files.wall4[0]; // Extract wall4
+    // Call the service function to update images
+    const imageUrls = await updateStallImagesService(
+      stallId,
+      uniqueCode,
+      logoStream,
+      wall1Stream,
+      wall2Stream,
+      wall3Stream,
+      wall4Stream
+    );
 
-      const logoBuffer = logoFile.buffer;
-      const wall1Buffer = wall1File.buffer;
-      const wall2Buffer = wall2File.buffer;
-      const wall3Buffer = wall3File.buffer;
-      const wall4Buffer = wall4File.buffer; // Get wall4 buffer
-
-      // Get file extensions for validation or processing
-      const logoFormat = await getFileExtension(logoFile.originalname);
-      const wall1Format = await getFileExtension(wall1File.originalname);
-      const wall2Format = await getFileExtension(wall2File.originalname);
-      const wall3Format = await getFileExtension(wall3File.originalname);
-      const wall4Format = await getFileExtension(wall4File.originalname); // For wall4
-
-      // Optionally, you can validate file extensions here before uploading (e.g., allow only 'jpg', 'png', etc.)
-      if (!['jpg', 'jpeg', 'png'].includes(logoFormat) || 
-          !['jpg', 'jpeg', 'png'].includes(wall1Format) || 
-          !['jpg', 'jpeg', 'png'].includes(wall2Format) || 
-          !['jpg', 'jpeg', 'png'].includes(wall3Format) ||
-          !['jpg', 'jpeg', 'png'].includes(wall4Format)) {  // Wall4 validation
-        return res.status(400).json({ error: 'Invalid file format. Only jpg, jpeg, and png are allowed.' });
-      }
-
-      // Convert the file buffers into readable streams
-      const logoStream = Readable.from(logoBuffer);
-      const wall1Stream = Readable.from(wall1Buffer);
-      const wall2Stream = Readable.from(wall2Buffer);
-      const wall3Stream = Readable.from(wall3Buffer);
-      const wall4Stream = Readable.from(wall4Buffer); // Wall4 stream
-
-      // Upload images to S3 and get the URLs
-      const imageUrls = await selectStallAndUploadImages(stallId, userId, zone,{ 
-        logoStream, wall1Stream, wall2Stream, wall3Stream, wall4Stream 
-      });
-
-      // Send success response
-      res.json({ message: 'Images uploaded successfully', imageUrls });
-
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  },
-];
+    // Send success response with the updated image URLs
+    res.status(200).json({
+      message: "Images updated successfully",
+      imageUrls,
+    });
+  } catch (error: any) {
+    console.error("Error updating images:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
