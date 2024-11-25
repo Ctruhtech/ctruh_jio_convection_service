@@ -44,7 +44,7 @@ export const getAvailableStalls = async (req: Request, res: Response) => {
   try {
     // Fetch all stalls that are available
     const availableStalls = await Stall.find({ isAvailable: true });
-
+   console.log(availableStalls);
     res.json({ availableStalls });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
