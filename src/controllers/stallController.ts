@@ -206,6 +206,22 @@ export const getStallsById = async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 };
+export const getStallsByZone = async (req: Request, res: Response) => {
+  try {
+    let zone = Number(req.params.zone);
+    // Fetch all stalls that are available
+    const availableStalls = await Stall.find({ zone: zone }).select(
+      "_id name logoUrl wall1Url wall2Url wall3Url wall4Url"
+    );
+    if (!availableStalls) {
+      return res.status(400).json({ error: "Stall not found" });
+    }
+    res.json({ availableStalls });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 export const handleDeleteImage = async (req: Request, res: Response) => {
   try {
