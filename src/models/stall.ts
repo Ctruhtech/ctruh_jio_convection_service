@@ -11,6 +11,7 @@ interface IStall extends Document {
   wall4Url?: string;
   zone?: string;
   uniqueCode?: string;
+  wallsCount?: number;
 }
 
 const StallSchema: Schema = new Schema({
@@ -24,6 +25,7 @@ const StallSchema: Schema = new Schema({
   wall4Url: { type: String, required: false },
   zone: { type: String, required: false },
   uniqueCode: { type: String, required: false },
+  wallsCount: { type: Number, required: false , default: null},
 });
 
 const Stall = mongoose.model<IStall>("Stall", StallSchema);

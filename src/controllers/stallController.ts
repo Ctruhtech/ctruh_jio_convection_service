@@ -21,7 +21,7 @@ interface Files {
 
 export const createStall = async (req: Request, res: Response) => {
   try {
-    const { name } = req.body;
+    const { name , wallsCount } = req.body;
     // Check if the 'name' is provided
     if (!name) {
       return res.status(400).json({ error: "Stall name is required" });
@@ -39,6 +39,7 @@ export const createStall = async (req: Request, res: Response) => {
       isAvailable: true,
       zone,
       uniqueCode,
+      wallsCount
     });
     // Save the new stall to the database
     await newStall.save();
