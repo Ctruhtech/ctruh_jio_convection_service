@@ -196,7 +196,7 @@ export const getStallsById = async (req: Request, res: Response) => {
     let id = new ObjectId((req.params.id).toString());
     // Fetch all stalls that are available
     const availableStalls = await Stall.findById(id).select(
-      "_id name logoUrl wall1Url wall2Url wall3Url wall4Url"
+      "_id name logoUrl wall1Url wall2Url wall3Url wall4Url wallsCount zone"
     );
     if (!availableStalls) {
       return res.status(400).json({ error: "Stall not found" });
@@ -211,7 +211,7 @@ export const getStallsByZone = async (req: Request, res: Response) => {
     let zone = Number(req.params.zone);
     // Fetch all stalls that are available
     const availableStalls = await Stall.find({ zone: zone }).select(
-      "_id name logoUrl wall1Url wall2Url wall3Url wall4Url"
+      "_id name logoUrl wall1Url wall2Url wall3Url wall4Url wallsCount zone"
     );
     if (!availableStalls) {
       return res.status(400).json({ error: "Stall not found" });
