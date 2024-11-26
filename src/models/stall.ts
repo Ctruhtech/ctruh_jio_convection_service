@@ -9,7 +9,7 @@ interface IStall extends Document {
   wall2Url?: string;
   wall3Url?: string;
   wall4Url?: string;
-  zone?: string;
+  zone?: number;
   uniqueCode?: string;
   wallsCount?: number;
 }
@@ -23,7 +23,7 @@ const StallSchema: Schema = new Schema({
   wall2Url: { type: String, required: false },
   wall3Url: { type: String, required: false },
   wall4Url: { type: String, required: false },
-  zone: { type: String, required: false },
+  zone: { type: Number, required: false },
   uniqueCode: { type: String, required: false },
   wallsCount: { type: Number, required: false , default: null},
 });

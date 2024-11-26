@@ -12,7 +12,7 @@ import {
 const router = express.Router();
 router.get("/stalls/available", getAvailableStalls);
 router.post("/stalls", createStall);
-router.get("/stalls/getById", getStallsById);
+router.get("/stalls/getById/:id", getStallsById);
 router.delete("/stalls/delete",handleDeleteImage)
 // Multer storage setup for file upload operations
 const storage = multer.memoryStorage();

@@ -1,10 +1,14 @@
 import { Request, Response } from "express";
 import { Stall } from "../models/stall";
 import { Readable } from "stream";
-import { deleteStallImageService, updateStallImagesService, uploadStallImagesService } from "../services/stallService";
+import {
+  deleteStallImageService,
+  updateStallImagesService,
+  uploadStallImagesService,
+} from "../services/stallService";
 import multer from "multer";
 import crypto from "crypto";
-import {ObjectId} from "mongodb";
+import { ObjectId } from "mongodb";
 
 const upload = multer(); // To handle image buffers
 
@@ -21,14 +25,11 @@ interface Files {
 
 export const createStall = async (req: Request, res: Response) => {
   try {
-    const { name , wallsCount } = req.body;
+    const { name, wallsCount, zone } = req.body;
     // Check if the 'name' is provided
     if (!name) {
       return res.status(400).json({ error: "Stall name is required" });
     }
-
-    // Derive zone from the first letter of the name, capitalized
-    const zone = name.charAt(0).toUpperCase();
 
     // Generate a unique 8-character alphanumeric code
     const uniqueCode = crypto.randomBytes(4).toString("hex").toUpperCase(); // 8 characters
@@ -39,7 +40,7 @@ export const createStall = async (req: Request, res: Response) => {
       isAvailable: true,
       zone,
       uniqueCode,
-      wallsCount
+      wallsCount,
     });
     // Save the new stall to the database
     await newStall.save();
@@ -93,16 +94,29 @@ export const getAvailableStalls = async (req: Request, res: Response) => {
 //   }
 // };
 
-export const handleImageUpload = async (req: Request, res: Response): Promise<void> => {
+export const handleImageUpload = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     // Dynamically extract files if they exist in the request
     const files = req.files || {};
 
-    const logoStream = files["logo"] ? Readable.from(files["logo"][0]?.buffer) : null;
-    const wall1Stream = files["wall1"] ? Readable.from(files["wall1"][0]?.buffer) : null;
-    const wall2Stream = files["wall2"] ? Readable.from(files["wall2"][0]?.buffer) : null;
-    const wall3Stream = files["wall3"] ? Readable.from(files["wall3"][0]?.buffer) : null;
-    const wall4Stream = files["wall4"] ? Readable.from(files["wall4"][0]?.buffer) : null;
+    const logoStream = files["logo"]
+      ? Readable.from(files["logo"][0]?.buffer)
+      : null;
+    const wall1Stream = files["wall1"]
+      ? Readable.from(files["wall1"][0]?.buffer)
+      : null;
+    const wall2Stream = files["wall2"]
+      ? Readable.from(files["wall2"][0]?.buffer)
+      : null;
+    const wall3Stream = files["wall3"]
+      ? Readable.from(files["wall3"][0]?.buffer)
+      : null;
+    const wall4Stream = files["wall4"]
+      ? Readable.from(files["wall4"][0]?.buffer)
+      : null;
 
     // Extract stallId and uniqueCode from the request body
     const { stallId, uniqueCode } = req.body;
@@ -128,16 +142,29 @@ export const handleImageUpload = async (req: Request, res: Response): Promise<vo
     res.status(500).json({ error: error.message });
   }
 };
-export const handleUpdateImageUpload = async (req: Request, res: Response): Promise<void> => {
+export const handleUpdateImageUpload = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     // Dynamically extract files if they exist in the request
     const files = req.files || {};
 
-    const logoStream = files["logo"] ? Readable.from(files["logo"][0]?.buffer) : null;
-    const wall1Stream = files["wall1"] ? Readable.from(files["wall1"][0]?.buffer) : null;
-    const wall2Stream = files["wall2"] ? Readable.from(files["wall2"][0]?.buffer) : null;
-    const wall3Stream = files["wall3"] ? Readable.from(files["wall3"][0]?.buffer) : null;
-    const wall4Stream = files["wall4"] ? Readable.from(files["wall4"][0]?.buffer) : null;
+    const logoStream = files["logo"]
+      ? Readable.from(files["logo"][0]?.buffer)
+      : null;
+    const wall1Stream = files["wall1"]
+      ? Readable.from(files["wall1"][0]?.buffer)
+      : null;
+    const wall2Stream = files["wall2"]
+      ? Readable.from(files["wall2"][0]?.buffer)
+      : null;
+    const wall3Stream = files["wall3"]
+      ? Readable.from(files["wall3"][0]?.buffer)
+      : null;
+    const wall4Stream = files["wall4"]
+      ? Readable.from(files["wall4"][0]?.buffer)
+      : null;
 
     // Extract stallId and uniqueCode from the request body
     const { stallId, uniqueCode } = req.body;
@@ -166,10 +193,12 @@ export const handleUpdateImageUpload = async (req: Request, res: Response): Prom
 
 export const getStallsById = async (req: Request, res: Response) => {
   try {
-    let id = new ObjectId(req?.body?.id);
+    let id = new ObjectId((req.params.id).toString());
     // Fetch all stalls that are available
-    const availableStalls = await Stall.findById(id).select("_id name logoUrl wall1Url wall2Url wall3Url wall4Url");
-    if(!availableStalls){
+    const availableStalls = await Stall.findById(id).select(
+      "_id name logoUrl wall1Url wall2Url wall3Url wall4Url"
+    );
+    if (!availableStalls) {
       return res.status(400).json({ error: "Stall not found" });
     }
     res.json({ availableStalls });
@@ -180,16 +209,16 @@ export const getStallsById = async (req: Request, res: Response) => {
 
 export const handleDeleteImage = async (req: Request, res: Response) => {
   try {
-    const { stallId, imageType , uniqueCode } = req.body; // Extract stallId and imageType from request body
-    
+    const { stallId, imageType, uniqueCode } = req.body; // Extract stallId and imageType from request body
+
     // Validate imageType
-    const validImageTypes = ['logo', 'wall1', 'wall2', 'wall3', 'wall4'];
+    const validImageTypes = ["logo", "wall1", "wall2", "wall3", "wall4"];
     if (!validImageTypes.includes(imageType)) {
-      return res.status(400).json({ error: 'Invalid image type' });
+      return res.status(400).json({ error: "Invalid image type" });
     }
 
     // Call the delete service
-    await deleteStallImageService(stallId, uniqueCode,imageType);
+    await deleteStallImageService(stallId, uniqueCode, imageType);
 
     // Send success response
     res.status(200).json({ message: `${imageType} deleted successfully` });
