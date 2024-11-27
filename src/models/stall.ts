@@ -12,6 +12,7 @@ interface IStall extends Document {
   zone?: number;
   uniqueCode?: string;
   wallsCount?: number;
+  glbURL?: string;
 }
 
 const StallSchema: Schema = new Schema({
@@ -26,6 +27,7 @@ const StallSchema: Schema = new Schema({
   zone: { type: Number, required: false },
   uniqueCode: { type: String, required: false },
   wallsCount: { type: Number, required: false , default: null},
+  glbURL: { type: String, required: false , default: null},
 });
 
 const Stall = mongoose.model<IStall>("Stall", StallSchema);

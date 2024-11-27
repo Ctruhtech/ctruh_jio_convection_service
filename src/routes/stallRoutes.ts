@@ -8,6 +8,7 @@ import {
   handleDeleteImage,
   handleImageUpload,
   handleUpdateImageUpload,
+  updateStall,
 } from "../controllers/stallController";
 
 const router = express.Router();
@@ -16,6 +17,7 @@ router.post("/stalls", createStall);
 router.get("/stalls/getById/:id", getStallsById);
 router.get("/stalls/getByZone/:zone", getStallsByZone);
 router.delete("/stalls/delete",handleDeleteImage)
+router.put("/stalls", updateStall);
 // Multer storage setup for file upload operations
 const storage = multer.memoryStorage();
 const upload = multer({

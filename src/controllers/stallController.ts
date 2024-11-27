@@ -25,7 +25,7 @@ interface Files {
 
 export const createStall = async (req: Request, res: Response) => {
   try {
-    const { name, wallsCount, zone } = req.body;
+    const { name, wallsCount, zone, glbURL } = req.body;
     // Check if the 'name' is provided
     if (!name) {
       return res.status(400).json({ error: "Stall name is required" });
@@ -41,6 +41,7 @@ export const createStall = async (req: Request, res: Response) => {
       zone,
       uniqueCode,
       wallsCount,
+      glbURL,
     });
     // Save the new stall to the database
     await newStall.save();
@@ -49,6 +50,37 @@ export const createStall = async (req: Request, res: Response) => {
     res
       .status(201)
       .json({ message: "Stall created successfullydd", stall: newStall });
+  } catch (error: any) {
+    // Handle errors and send a response
+    res.status(500).json({ error: error.message });
+  }
+};
+export const updateStall = async (req: Request, res: Response) => {
+  try {
+    const { stallName } = req.body;
+    const stall = await Stall.findOne({ name: stallName });
+    if (!stall) {
+      return res.status(400).json({ error: "Stall not found" });
+    }
+    // Check if the 'name' is provided
+    if (!stallName) {
+      return res.status(400).json({ error: "Stall name is required" });
+    }
+    const staticURL = "https://ctruhblobstorage.blob.core.windows.net/$web/";
+    const glbUrl = `${staticURL}${stallName}.glb`;
+
+    const updatedStall = await Stall.findOneAndUpdate(
+      { name: stallName },
+      { $set: { glbURL: glbUrl } },
+      { new: true }
+    );
+    if (!updatedStall) {
+      return res.status(400).json({ error: "Stall not found" });
+    }
+
+    res
+      .status(201)
+      .json({ message: "Stall updated  successfully", stall: updatedStall });
   } catch (error: any) {
     // Handle errors and send a response
     res.status(500).json({ error: error.message });
@@ -193,10 +225,10 @@ export const handleUpdateImageUpload = async (
 
 export const getStallsById = async (req: Request, res: Response) => {
   try {
-    let id = new ObjectId((req.params.id).toString());
+    let id = new ObjectId(req.params.id.toString());
     // Fetch all stalls that are available
     const availableStalls = await Stall.findById(id).select(
-      "_id name logoUrl wall1Url wall2Url wall3Url wall4Url wallsCount zone"
+      "_id name logoUrl wall1Url wall2Url wall3Url wall4Url wallsCount zone glbURL"
     );
     if (!availableStalls) {
       return res.status(400).json({ error: "Stall not found" });
@@ -221,7 +253,6 @@ export const getStallsByZone = async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 export const handleDeleteImage = async (req: Request, res: Response) => {
   try {
