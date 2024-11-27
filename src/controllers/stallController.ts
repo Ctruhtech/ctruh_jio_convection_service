@@ -91,7 +91,7 @@ export const updateStall = async (req: Request, res: Response) => {
 export const getAvailableStalls = async (req: Request, res: Response) => {
   try {
     // Fetch all stalls that are available
-    const availableStalls = await Stall.find().select("_id name");
+    const availableStalls = await Stall.find().select("_id name logoUrl wall1Url wall2Url wall3Url wall4Url wallsCount zone glbURL");
     res.json({ availableStalls });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
